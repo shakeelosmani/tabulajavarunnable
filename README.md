@@ -1,4 +1,4 @@
-#Tabula Java Runnable
+# Tabula Java Runnable
 
 This is a simple project that uses [Tabula Java](https://github.com/tabulapdf/tabula-java) to extract PDF documents into JSON.
 Tabula JAVA can do much more, I have taken up these sensible defaults which can easily be converted into arguments. The reasoning behind this is Tabula does not provide any interface where
