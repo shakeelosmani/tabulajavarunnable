@@ -2,23 +2,24 @@ package TabulaExtractor;
 
 import java.io.*;
 import java.util.Base64;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import technology.tabula.*;
+import technology.tabula.json.RectangularTextContainerSerializer;
+import technology.tabula.json.TableSerializer;
 import technology.tabula.writers.JSONWriter;
 import org.apache.commons.cli.ParseException;
-import technology.tabula.Page;
-import technology.tabula.Rectangle;
-import technology.tabula.PageIterator;
-import technology.tabula.Table;
 import technology.tabula.detectors.DetectionAlgorithm;
 import technology.tabula.detectors.NurminenDetectionAlgorithm;
 import technology.tabula.extractors.BasicExtractionAlgorithm;
 import technology.tabula.extractors.SpreadsheetExtractionAlgorithm;
-import technology.tabula.ObjectExtractor;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
-
 
 
 public class Extract {
@@ -27,20 +28,21 @@ public class Extract {
     private TableExtractor tableExtractor;
     private List<Integer> pages;
 
-    public void extractTable(String base64Data) {
+    public String extractTable(String base64Data) {
+        String result = "";
         byte[] bytes = Base64.getDecoder().decode(base64Data);
         try (DataOutputStream os = new DataOutputStream(new FileOutputStream("output.pdf"))) {
 
             os.write(bytes);
             os.close();
 
-        }catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
         File pdfFile = new File("output.pdf");
 
-        if(!pdfFile.exists()) {
+        if (!pdfFile.exists()) {
             try {
                 throw new ParseException("File does not exist");
             } catch (ParseException e) {
@@ -48,21 +50,22 @@ public class Extract {
             }
         } else {
             try {
-                extractFileTables(pdfFile);
+               result = extractFileTables(pdfFile);
+
             } catch (ParseException e) {
                 e.printStackTrace();
             }
         }
-
+        return result;
     }
 
-    public void extractFileTables(File pdfFile) throws ParseException {
+    public String extractFileTables(File pdfFile) throws ParseException {
 
-        extractFile(pdfFile);
-        return;
+        String result = extractFile(pdfFile);
+        return result;
     }
 
-    private void extractFile(File pdfFile) throws ParseException {
+    private String extractFile(File pdfFile) throws ParseException {
         PDDocument pdfDocument = null;
         try {
             pdfDocument = this.password == null ? PDDocument.load(pdfFile) : PDDocument.load(pdfFile, this.password);
@@ -77,24 +80,19 @@ public class Extract {
             }
             File outputFile = new File("output.json");
             BufferedWriter bufferedWriter = null;
-            try {
-                FileWriter fileWriter = new FileWriter(outputFile.getAbsoluteFile());
-                bufferedWriter = new BufferedWriter(fileWriter);
 
-                outputFile.createNewFile();
-                JSONWriter writer = new JSONWriter();
-                writer.write(bufferedWriter, tables);
-            } catch (IOException e) {
-                throw new ParseException("Cannot create file " + outputFile);
-            } finally {
-                if (bufferedWriter != null) {
-                    try {
-                        bufferedWriter.close();
-                    } catch (IOException e) {
-                        System.out.println("Error in closing the BufferedWriter" + e);
-                    }
-                }
+            Gson gson = gson();
+            JsonArray array = new JsonArray();
+            Iterator var5 = tables.iterator();
+
+            while (var5.hasNext()) {
+                Table table = (Table) var5.next();
+                array.add(gson.toJsonTree(table, Table.class));
             }
+
+            return gson.toJson(array);
+
+
         } catch (IOException e) {
             throw new ParseException(e.getMessage());
         } finally {
@@ -195,14 +193,15 @@ public class Extract {
         }
     }
 
+    private static Gson gson() {
+        return (new GsonBuilder()).registerTypeAdapter(Table.class, TableSerializer.INSTANCE).registerTypeAdapter(RectangularTextContainer.class, RectangularTextContainerSerializer.INSTANCE).registerTypeAdapter(Cell.class, RectangularTextContainerSerializer.INSTANCE).registerTypeAdapter(TextChunk.class, RectangularTextContainerSerializer.INSTANCE).create();
+    }
+
     private enum ExtractionMethod {
         BASIC,
         SPREADSHEET,
         DECIDE
     }
-
-
-
 
 
 }

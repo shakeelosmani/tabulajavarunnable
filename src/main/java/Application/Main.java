@@ -22,8 +22,8 @@ public class Main {
 
 
         Extract extract = new Extract();
-        extract.extractTable(input);
-
+        String json = extract.extractTable(input);
+        System.out.println(json);
     }
 
 }
